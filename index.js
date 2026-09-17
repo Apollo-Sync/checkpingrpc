@@ -90,8 +90,23 @@ function stats(rows) {
   };
 }
 
+const RESET = "\x1b[0m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[93m"; // vàng nhạt
+const RED = "\x1b[31m";
+
 function fmt(n) {
   return `${n.toFixed(1)}ms`;
+}
+
+function pickColor(ms) {
+  if (ms <= 30) return GREEN;
+  if (ms <= 50) return YELLOW;
+  return RED;
+}
+
+function colorMs(ms) {
+  return `${pickColor(ms)}${fmt(ms)}${RESET}`;
 }
 
 const urls = loadRpcs();
@@ -114,9 +129,9 @@ for (const url of urls) {
     const r = await pingOnce(url);
     rows.push(r);
     if (r.ok) {
-      console.log(`  #${String(i).padStart(2, "0")}  ${fmt(r.ms)}  block=${r.block}`);
+      console.log(`  #${String(i).padStart(2, "0")}  ${colorMs(r.ms)}  block=${r.block}`);
     } else {
-      console.log(`  #${String(i).padStart(2, "0")}  FAIL  ${r.err || "http " + r.status}  ${fmt(r.ms)}`);
+      console.log(`  #${String(i).padStart(2, "0")}  FAIL  ${r.err || "http " + r.status}  ${colorMs(r.ms)}`);
     }
   }
   const s = stats(rows);
@@ -126,7 +141,7 @@ for (const url of urls) {
     continue;
   }
   console.log(
-    `  >> ok ${s.ok}/${ROUNDS} | min ${fmt(s.min)} | p50 ${fmt(s.p50)} | avg ${fmt(s.avg)} | max ${fmt(s.max)}\n`
+    `  >> ok ${s.ok}/${ROUNDS} | min ${colorMs(s.min)} | p50 ${colorMs(s.p50)} | avg ${colorMs(s.avg)} | max ${colorMs(s.max)}\n`
   );
   summary.push({ url, ...s });
 }
@@ -144,6 +159,11 @@ function padRight(str, len) {
 function padLeft(str, len) {
   str = String(str);
   return str.length >= len ? str : " ".repeat(len - str.length) + str;
+}
+
+function colorPad(ms, width) {
+  const padded = padLeft(fmt(ms), width);
+  return `${pickColor(ms)}${padded}${RESET}`;
 }
 
 console.log("=".repeat(90));
@@ -167,7 +187,7 @@ for (const s of ranked) {
     continue;
   }
   console.log(
-    `${padRight(short(s.url, colUrl), colUrl)} ${padLeft(`${s.ok}/${s.ok + s.fail}`, 6)} ${padLeft(fmt(s.min), 9)} ${padLeft(fmt(s.avg), 9)} ${padLeft(fmt(s.p50), 9)} ${padLeft(fmt(s.max), 9)}`
+    `${padRight(short(s.url, colUrl), colUrl)} ${padLeft(`${s.ok}/${s.ok + s.fail}`, 6)} ${colorPad(s.min, 9)} ${colorPad(s.avg, 9)} ${colorPad(s.p50, 9)} ${colorPad(s.max, 9)}`
   );
 }
 
