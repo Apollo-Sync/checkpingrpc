@@ -122,8 +122,10 @@ console.log(`Timeout: ${TIMEOUT_MS}ms\n`);
 
 const summary = [];
 
-for (const url of urls) {
-  console.log(`=== ${url} ===`);
+for (let idx = 0; idx < urls.length; idx++) {
+  const url = urls[idx];
+  const label = `RPC${idx + 1}`;
+  console.log(`=== ${label}: ${url} ===`);
   const rows = [];
   for (let i = 1; i <= ROUNDS; i++) {
     const r = await pingOnce(url);
@@ -137,20 +139,16 @@ for (const url of urls) {
   const s = stats(rows);
   if (!s) {
     console.log("  >> không có request thành công\n");
-    summary.push({ url, ok: 0, fail: ROUNDS, min: null, avg: null, max: null, p50: null });
+    summary.push({ label, url, ok: 0, fail: ROUNDS, min: null, avg: null, max: null, p50: null });
     continue;
   }
   console.log(
     `  >> ok ${s.ok}/${ROUNDS} | min ${colorMs(s.min)} | p50 ${colorMs(s.p50)} | avg ${colorMs(s.avg)} | max ${colorMs(s.max)}\n`
   );
-  summary.push({ url, ...s });
+  summary.push({ label, url, ...s });
 }
 
 // ===== Bảng tổng hợp =====
-function short(url, max = 40) {
-  return url.length > max ? url.slice(0, max - 1) + "…" : url;
-}
-
 function padRight(str, len) {
   str = String(str);
   return str.length >= len ? str : str + " ".repeat(len - str.length);
@@ -175,23 +173,29 @@ rankable.sort((a, b) => a.avg - b.avg);
 const failed = summary.filter((s) => s.avg === null);
 const ranked = [...rankable, ...failed];
 
-const colUrl = 40;
+const colLabel = 10;
 console.log(
-  `${padRight("RPC", colUrl)} ${padLeft("OK", 6)} ${padLeft("Min", 9)} ${padLeft("Avg", 9)} ${padLeft("P50", 9)} ${padLeft("Max", 9)}`
+  `${padRight("RPC", colLabel)} ${padLeft("OK", 6)} ${padLeft("Min", 9)} ${padLeft("Avg", 9)} ${padLeft("P50", 9)} ${padLeft("Max", 9)}`
 );
 console.log("-".repeat(90));
 
 for (const s of ranked) {
   if (s.avg === null) {
-    console.log(`${padRight(short(s.url, colUrl), colUrl)} ${padLeft("0/" + (s.ok + s.fail), 6)}  LỖI HẾT (không có request thành công)`);
+    console.log(`${padRight(s.label, colLabel)} ${padLeft("0/" + (s.ok + s.fail), 6)}  LỖI HẾT (không có request thành công)`);
     continue;
   }
   console.log(
-    `${padRight(short(s.url, colUrl), colUrl)} ${padLeft(`${s.ok}/${s.ok + s.fail}`, 6)} ${colorPad(s.min, 9)} ${colorPad(s.avg, 9)} ${colorPad(s.p50, 9)} ${colorPad(s.max, 9)}`
+    `${padRight(s.label, colLabel)} ${padLeft(`${s.ok}/${s.ok + s.fail}`, 6)} ${colorPad(s.min, 9)} ${colorPad(s.avg, 9)} ${colorPad(s.p50, 9)} ${colorPad(s.max, 9)}`
   );
 }
 
 console.log("=".repeat(90));
 if (rankable.length) {
-  console.log(`Nhanh nhất (avg thấp nhất): ${rankable[0].url}`);
+  console.log(`Nhanh nhất (avg thấp nhất): ${rankable[0].label} (${rankable[0].url})`);
+}
+
+// Chú thích ánh xạ RPC# -> URL đầy đủ
+console.log("\nChú thích:");
+for (const s of summary) {
+  console.log(`  ${s.label} = ${s.url}`);
 }
