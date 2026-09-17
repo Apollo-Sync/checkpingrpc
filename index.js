@@ -105,6 +105,8 @@ const ROUNDS = await askRounds();
 console.log(`\nRounds: ${ROUNDS}`);
 console.log(`Timeout: ${TIMEOUT_MS}ms\n`);
 
+const summary = [];
+
 for (const url of urls) {
   console.log(`=== ${url} ===`);
   const rows = [];
@@ -120,9 +122,56 @@ for (const url of urls) {
   const s = stats(rows);
   if (!s) {
     console.log("  >> không có request thành công\n");
+    summary.push({ url, ok: 0, fail: ROUNDS, min: null, avg: null, max: null, p50: null });
     continue;
   }
   console.log(
     `  >> ok ${s.ok}/${ROUNDS} | min ${fmt(s.min)} | p50 ${fmt(s.p50)} | avg ${fmt(s.avg)} | max ${fmt(s.max)}\n`
   );
+  summary.push({ url, ...s });
+}
+
+// ===== Bảng tổng hợp =====
+function short(url, max = 40) {
+  return url.length > max ? url.slice(0, max - 1) + "…" : url;
+}
+
+function padRight(str, len) {
+  str = String(str);
+  return str.length >= len ? str : str + " ".repeat(len - str.length);
+}
+
+function padLeft(str, len) {
+  str = String(str);
+  return str.length >= len ? str : " ".repeat(len - str.length) + str;
+}
+
+console.log("=".repeat(90));
+console.log("BẢNG TỔNG HỢP KẾT QUẢ");
+console.log("=".repeat(90));
+
+const rankable = summary.filter((s) => s.avg !== null);
+rankable.sort((a, b) => a.avg - b.avg);
+const failed = summary.filter((s) => s.avg === null);
+const ranked = [...rankable, ...failed];
+
+const colUrl = 40;
+console.log(
+  `${padRight("RPC", colUrl)} ${padLeft("OK", 6)} ${padLeft("Min", 9)} ${padLeft("Avg", 9)} ${padLeft("P50", 9)} ${padLeft("Max", 9)}`
+);
+console.log("-".repeat(90));
+
+for (const s of ranked) {
+  if (s.avg === null) {
+    console.log(`${padRight(short(s.url, colUrl), colUrl)} ${padLeft("0/" + (s.ok + s.fail), 6)}  LỖI HẾT (không có request thành công)`);
+    continue;
+  }
+  console.log(
+    `${padRight(short(s.url, colUrl), colUrl)} ${padLeft(`${s.ok}/${s.ok + s.fail}`, 6)} ${padLeft(fmt(s.min), 9)} ${padLeft(fmt(s.avg), 9)} ${padLeft(fmt(s.p50), 9)} ${padLeft(fmt(s.max), 9)}`
+  );
+}
+
+console.log("=".repeat(90));
+if (rankable.length) {
+  console.log(`Nhanh nhất (avg thấp nhất): ${rankable[0].url}`);
 }
